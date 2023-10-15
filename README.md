@@ -6,10 +6,10 @@ Vulnerability Scanner written in python3, It Fuzzes All URLs of target website &
 $ cd /opt/
 
 # Clone this repository
-$ git clone https://github.com/PushpenderIndia/EARScanner.git
+$ git clone https://github.com/Khalidhusain786/Scannerweb.git
 
-# Navigate to EARScanner folder
-$ cd EARScanner
+# Navigate to scannerweb folder
+$ cd scannerweb
 
 # Installing dependencies
 $ sudo apt install python3-pip 
