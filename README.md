@@ -35,10 +35,11 @@ cd /opt/
 # Scanning Single URL
 
  python3 scannerweb.py -u https://example.com/admin/dashboard.php
-
+ 
 # Scanning Multiple URLs
 
  python3 scannerweb.py -uL url_list.txt
 
 # Automatically FUZZ URLs and Scan Them for web 
-$ python3 scannerweb.py -f https://www.example.com
+
+python3 scannerweb.py -f https://www.example.com
