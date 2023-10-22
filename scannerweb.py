@@ -41,11 +41,11 @@ class scannerweb:
         self.content_length       = int(self.arguments.ContentLength)
 
         if self.arguments.url:
-            self.check_ear(self.arguments.url)
+            self.check_sacnnerweb(self.arguments.url)
         elif self.arguments.file_containing_urls:
             self.file_containing_urls = self.arguments.file_containing_urls
             print("="*85)
-            print(f'{Fore.YELLOW}[*] Initiating {Fore.GREEN}Exection After Redirect{Fore.YELLOW} (EAR) Vulnerability Scanner ...{Style.RESET_ALL}')
+            print(f'{Fore.YELLOW}[*] Initiating {Fore.GREEN}Exection After Redirect{Fore.YELLOW} (Webscan) Vulnerability Scanner ...{Style.RESET_ALL}')
             print("="*85)
             final_url_list = []
 
@@ -60,7 +60,7 @@ class scannerweb:
 
             # Multi-Threaded Implementation
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.ThreadNumber)
-            futures = [executor.submit(self.check_ear, url) for url in final_url_list]
+            futures = [executor.submit(self.check_scanweb, url) for url in final_url_list]
             concurrent.futures.wait(futures)    
         elif self.arguments.fuzz_and_scan:
 
@@ -78,7 +78,7 @@ class scannerweb:
             except KeyboardInterrupt:
                 pass 
             print("="*85)
-            print(f'{Fore.YELLOW}[*] Initiating {Fore.GREEN}Exection After Redirect{Fore.YELLOW} (EAR) Vulnerability Scanner ...{Style.RESET_ALL}')
+            print(f'{Fore.YELLOW}[*] Initiating {Fore.GREEN}Exection After Redirect{Fore.YELLOW} (Scannerweb) Vulnerability Scanner ...{Style.RESET_ALL}')
             print("="*85)      
             final_url_list = []
 
@@ -93,7 +93,7 @@ class scannerweb:
 
             # Multi-Threaded Implementation
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.ThreadNumber)
-            futures = [executor.submit(self.check_ear, potential_url) for potential_url in final_url_list]
+            futures = [executor.submit(self.check_Scanweb, potential_url) for potential_url in final_url_list]
             concurrent.futures.wait(futures)          
         else:
             print(f"{Fore.RED}[!] Please Provide either {Fore.YELLOW}File Containing list{Fore.RED} or {Fore.YELLOW}Single URL{Fore.RED}, {Fore.GREEN}type {sys.argv[0]} --help for more.{Style.RESET_ALL}")
@@ -113,7 +113,7 @@ class scannerweb:
                 print(f'{Fore.GREEN}[+] Vulnerable URLs: {Fore.YELLOW}{self.arguments.output}{Style.RESET_ALL}')
                 print("="*85)       
 
-    def check_ear(self, url):
+    def check_scanweb(self, url):
         try:
             response = requests.get(url, timeout=60, verify=False, allow_redirects=False)
             # Step-1: Checking Whether Status Code is 302
