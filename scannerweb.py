@@ -41,7 +41,7 @@ class scannerweb:
         self.content_length       = int(self.arguments.ContentLength)
 
         if self.arguments.url:
-            self.check_sacnnerweb(self.arguments.url)
+            self.check_ear(self.arguments.url)
         elif self.arguments.file_containing_urls:
             self.file_containing_urls = self.arguments.file_containing_urls
             print("="*85)
@@ -60,7 +60,7 @@ class scannerweb:
 
             # Multi-Threaded Implementation
             executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.ThreadNumber)
-            futures = [executor.submit(self.check_scanweb, url) for url in final_url_list]
+            futures = [executor.submit(self.check_ear, url) for url in final_url_list]
             concurrent.futures.wait(futures)    
         elif self.arguments.fuzz_and_scan:
 
@@ -113,7 +113,7 @@ class scannerweb:
                 print(f'{Fore.GREEN}[+] Vulnerable URLs: {Fore.YELLOW}{self.arguments.output}{Style.RESET_ALL}')
                 print("="*85)       
 
-    def check_scanweb(self, url):
+    def check_ear(self, url):
         try:
             response = requests.get(url, timeout=60, verify=False, allow_redirects=False)
             # Step-1: Checking Whether Status Code is 302
