@@ -42,4 +42,6 @@ cd /opt/
 
 # Automatically FUZZ URLs and Scan Them for web 
 
-python3 scannerweb.py -f https://www.example.com
+sudo apt install gobuster
+
+python3 scannerweb.py -f https://www.example.com -w wrordlst.txt
