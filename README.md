@@ -3,8 +3,10 @@
 Vulnerability Scanner written in python3, It Fuzzes All URLs of target website & then scan them for scanner web
 
 # Screeenshot 
+
 ![CAPTURE 1](https://github.com/Khalidhusain786/Scannerweb/blob/main/Screenshot_2023-10-15_22_39_36.png)
 ![CAPTURE 1](https://github.com/Khalidhusain786/Scannerweb/blob/main/Screenshot_2023-10-15_22_40_00.png)
+
 # Navigate to the /opt directory (optional)
 
 cd /opt/
