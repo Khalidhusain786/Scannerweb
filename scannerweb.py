@@ -1,152 +1,130 @@
 import requests
-requests.packages.urllib3.disable_warnings()
+import urllib3
 import concurrent.futures
-
-from colorama import init
-from colorama import Fore, Back, Style
-init()
+from colorama import init, Fore, Back, Style
 import argparse
 import pyfiglet
-import sys 
-import os 
+import sys
+import os
 import platform
+
+# Correctly disable SSL warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+init()
 
 class scannerweb:
     def __init__(self):
-        self.vulnerable_urls      = []
-        self.progress             = []
-        self.errors               = []
+        self.vulnerable_urls = []
+        self.progress = []
+        self.errors = []
+        self.total = 0
 
     def get_arguments(self):
-        banner = pyfiglet.figlet_format("            scannerweb")
-        print(banner+"\n")
-        parser = argparse.ArgumentParser(description=f'{Fore.RED} Scannerweb v1.0 {Fore.YELLOW}[Author: {Fore.GREEN} Khalid Husain {Fore.YELLOW}] [{Fore.GREEN}https://github.com/Khalidhusain786 {Fore.YELLOW}]')
+        # Banner with your custom title
+        banner = pyfiglet.figlet_format("      scannerweb")
+        print(f"{Fore.CYAN}{banner}{Style.RESET_ALL}")
+        
+        parser = argparse.ArgumentParser(description=f'{Fore.RED}Scannerweb v1.0 {Fore.YELLOW}[Author: {Fore.GREEN}Khalid Husain{Fore.YELLOW}] [{Fore.GREEN}https://github.com/Khalidhusain786{Fore.YELLOW}]')
         parser._optionals.title = f"{Fore.GREEN}Optional Arguments{Fore.YELLOW}"
-        parser.add_argument("-u", "--url", dest="url", help=f"{Fore.GREEN}Scan Single URL for Khalid{Fore.YELLOW}")
-        parser.add_argument("-uL", "--url-list", dest="file_containing_urls", help=f"{Fore.GREEN}Provide a File Containing URLs {Fore.YELLOW}[PRO_TIP: {Fore.GREEN}Fuzz ALL URLs using tools such as ffuf,gobuster,disbuter,etc & then pass urls_list.txt using this argument{Fore.YELLOW}] [NOTE: {Fore.RED}One URL in One Line{Fore.YELLOW}].")    
-        parser.add_argument("-f", "--fuzz-scan", dest="fuzz_and_scan", help=f"{Fore.GREEN}Provide a domain for scanning [It will Fuzz ALL URLs using GoBuster & Then It will scan them.] {Fore.YELLOW}") 
-        parser.add_argument("-w", "--wordlist", dest="wordlist", help=f"{Fore.GREEN}Provide a wordlist for fuzzing. {Fore.YELLOW}[Only Use With {Fore.GREEN}--fuzz-scan{Fore.YELLOW}]. {Fore.WHITE}default=content_discovery_all.txt{Fore.YELLOW}", default='content_discovery_all.txt') 
-        parser.add_argument("-t", "--timeout", dest="timeout", help=f"{Fore.GREEN}HTTP Request Timeout. {Fore.WHITE}default=60{Fore.YELLOW}", default=60)
-        parser.add_argument("-th", "--thread", dest="ThreadNumber", help=f"{Fore.GREEN}Parallel HTTP Request Number. {Fore.WHITE}default=100{Fore.YELLOW}", default=100)
-        parser.add_argument("-c", "--content-length", dest="ContentLength", help=f"{Fore.GREEN}Any Content Length for Confirming ear Vulnerability. {Fore.WHITE}default=200{Fore.YELLOW}", default=200)
-        parser.add_argument("-o", "--output", dest="output", help=f"{Fore.GREEN}Output filename [Script will save vulnerable urls by given name]. {Fore.WHITE}default=vulnerable.txt{Fore.YELLOW}", default='vulnerable.txt')
+        
+        parser.add_argument("-u", "--url", dest="url", help=f"Scan Single URL for Khalid")
+        parser.add_argument("-uL", "--url-list", dest="file_containing_urls", help=f"Provide a File Containing URLs")
+        parser.add_argument("-f", "--fuzz-scan", dest="fuzz_and_scan", help=f"Fuzz domain using GoBuster then scan")
+        parser.add_argument("-w", "--wordlist", dest="wordlist", help=f"Wordlist for fuzzing", default='content_discovery_all.txt')
+        parser.add_argument("-t", "--timeout", dest="timeout", help=f"HTTP Timeout (default: 60)", default=60, type=int)
+        parser.add_argument("-th", "--thread", dest="ThreadNumber", help=f"Parallel Threads (default: 100)", default=100, type=int)
+        parser.add_argument("-c", "--content-length", dest="ContentLength", help=f"Content Length for EAR Confirmation", default=200, type=int)
+        parser.add_argument("-o", "--output", dest="output", help=f"Output filename", default='vulnerable.txt')
 
         return parser.parse_args()
 
     def start(self):
         self.arguments = self.get_arguments()
-        print(f"{Fore.YELLOW}           [Author: {Fore.GREEN} Khalid Husain {Fore.YELLOW}] [{Fore.GREEN}https://github.com/Khalidhusain786 {Fore.YELLOW}]\n\n{Style.RESET_ALL}")
-        self.ThreadNumber         = int(self.arguments.ThreadNumber)
-        self.timeout              = int(self.arguments.timeout)
-        self.content_length       = int(self.arguments.ContentLength)
+        print(f"{Fore.YELLOW}           [Author: {Fore.GREEN}Khalid Husain{Fore.YELLOW}] [{Fore.GREEN}https://github.com/Khalidhusain786{Fore.YELLOW}]\n\n{Style.RESET_ALL}")
+        
+        self.ThreadNumber = self.arguments.ThreadNumber
+        self.timeout = self.arguments.timeout
+        self.content_length = self.arguments.ContentLength
 
         if self.arguments.url:
             self.check_ear(self.arguments.url)
+            
         elif self.arguments.file_containing_urls:
-            self.file_containing_urls = self.arguments.file_containing_urls
-            print("="*85)
-            print(f'{Fore.YELLOW}[*] Initiating {Fore.GREEN}Exection After Redirect{Fore.YELLOW} (Webscan) Vulnerability Scanner ...{Style.RESET_ALL}')
-            print("="*85)
-            final_url_list = []
-
-            with open(self.file_containing_urls) as f:
-                data_list = f.readlines()
+            if not os.path.exists(self.arguments.file_containing_urls):
+                print(f"{Fore.RED}[!] File not found!{Style.RESET_ALL}")
+                return
             
-            for url in data_list:
-                if url != '\n':
-                    final_url_list.append(url.strip())
+            with open(self.arguments.file_containing_urls, 'r') as f:
+                final_url_list = [line.strip() for line in f if line.strip()]
 
-            self.total = len(final_url_list)  # Used in showing progressbar 
+            self.total = len(final_url_list)
+            print("="*85)
+            print(f'{Fore.YELLOW}[*] Initiating Execution After Redirect (Webscan) Scanner...{Style.RESET_ALL}')
+            print("="*85)
 
-            # Multi-Threaded Implementation
-            executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.ThreadNumber)
-            futures = [executor.submit(self.check_ear, url) for url in final_url_list]
-            concurrent.futures.wait(futures)    
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.ThreadNumber) as executor:
+                executor.map(self.check_ear, final_url_list)
+
         elif self.arguments.fuzz_and_scan:
-
             print("="*85)
-            print(f'{Fore.YELLOW}[*] Fuzzing URLs using {Fore.GREEN}GoBuster{Fore.YELLOW} Tool ...{Style.RESET_ALL}')
+            print(f'{Fore.YELLOW}[*] Fuzzing URLs using GoBuster Tool...{Style.RESET_ALL}')
             print("="*85)
-            url = self.arguments.fuzz_and_scan
-            if platform.system() == 'Windows':
-                command = f'gobuster.exe dir -w {self.arguments.wordlist} -t {self.timeout} -x php,asp,aspx,jsp -u {url} -o urls_list.txt -q -e'
-            else:
-                command = f"gobuster dir -w {self.arguments.wordlist} -t {self.timeout} -x php,asp,aspx,jsp -u {url} -o urls_list.txt -q -e"
-
-            try:
-                os.system(command)
-            except KeyboardInterrupt:
-                pass 
-            print("="*85)
-            print(f'{Fore.YELLOW}[*] Initiating {Fore.GREEN}Exection After Redirect{Fore.YELLOW} (Scannerweb) Vulnerability Scanner ...{Style.RESET_ALL}')
-            print("="*85)      
-            final_url_list = []
-
-            with open('urls_list.txt') as f:
-                data_list = f.readlines()
+            binary = "gobuster.exe" if platform.system() == 'Windows' else "gobuster"
+            command = f'{binary} dir -w {self.arguments.wordlist} -t {self.timeout} -x php,asp,aspx,jsp -u {self.arguments.fuzz_and_scan} -o urls_list.txt -q -e'
             
-            for url in data_list:
-                if url != '\n':
-                    final_url_list.append(url.split(' ')[0].strip())
+            os.system(command)
 
-            self.total = len(final_url_list)  # Used in showing progressbar 
-
-            # Multi-Threaded Implementation
-            executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.ThreadNumber)
-            futures = [executor.submit(self.check_Scanweb, potential_url) for potential_url in final_url_list]
-            concurrent.futures.wait(futures)          
+            if os.path.exists('urls_list.txt'):
+                with open('urls_list.txt', 'r') as f:
+                    final_url_list = [line.split(' ')[0].strip() for line in f if line.strip()]
+                
+                self.total = len(final_url_list)
+                print("="*85)
+                print(f'{Fore.YELLOW}[*] Initiating Scannerweb Vulnerability Scanner...{Style.RESET_ALL}')
+                print("="*85)
+                
+                with concurrent.futures.ThreadPoolExecutor(max_workers=self.ThreadNumber) as executor:
+                    executor.map(self.check_ear, final_url_list)
         else:
-            print(f"{Fore.RED}[!] Please Provide either {Fore.YELLOW}File Containing list{Fore.RED} or {Fore.YELLOW}Single URL{Fore.RED}, {Fore.GREEN}type {sys.argv[0]} --help for more.{Style.RESET_ALL}")
+            print(f"{Fore.RED}[!] Please Provide a URL or File. Use --help for more.{Style.RESET_ALL}")
             sys.exit()
 
-        # Saving Result
-        if self.arguments.output:
-            output_filename = self.arguments.output
-            if not output_filename.endswith('txt'):
-                output_filename = output_filename.split('.')[0] + ".txt"
-            if len(self.vulnerable_urls) != 0:
-                with open(output_filename, 'w') as f:
-                    for vuln_url in self.vulnerable_urls:
-                        f.write(vuln_url+"\n") 
-                print()
-                print("="*85)
-                print(f'{Fore.GREEN}[+] Vulnerable URLs: {Fore.YELLOW}{self.arguments.output}{Style.RESET_ALL}')
-                print("="*85)       
+        # Save results
+        if self.vulnerable_urls:
+            with open(self.arguments.output, 'w') as f:
+                for vuln in self.vulnerable_urls:
+                    f.write(vuln + "\n")
+            print(f'\n\n{Fore.GREEN}[+] Results saved to: {self.arguments.output}{Style.RESET_ALL}')
 
     def check_ear(self, url):
         try:
-            response = requests.get(url, timeout=60, verify=False, allow_redirects=False)
-            # Step-1: Checking Whether Status Code is 302
-            status_code = response.status_code
-            if status_code == 302:
-                # Step-2: Checking Whether 'Location' Header is Present
-                if 'Location' in response.headers.keys():
+            # allow_redirects=False is required to detect EAR
+            response = requests.get(url, timeout=self.timeout, verify=False, allow_redirects=False)
+            
+            if response.status_code == 302:
+                if 'Location' in response.headers:
                     response_length = len(response.text)
                     if response_length >= self.content_length:
-                        if self.arguments.url:
-                            print(f'{Fore.GREEN}[+] [302] {Fore.WHITE}{url} {Fore.YELLOW}[Location: {Fore.GREEN}{response.headers["Location"]}{Fore.WHITE}] {Fore.YELLOW}[Status: {Fore.GREEN}100% Vulnerable{Fore.YELLOW}]{Style.RESET_ALL}') 
-                        self.vulnerable_urls.append(url)
+                        status = f"{Fore.GREEN}100% Vulnerable"
                     else:
-                        if self.arguments.url:
-                            print(f'{Fore.GREEN}[+] [302] {Fore.WHITE}{url} {Fore.YELLOW}[Location: {Fore.GREEN}{response.headers["Location"]}{Fore.WHITE}] {Fore.YELLOW}[Status: {Fore.GREEN}Might Be Vulnerable{Fore.YELLOW}]{Style.RESET_ALL}')                    
-                        self.vulnerable_urls.append(url)
-            else:
-                if self.arguments.url:
-                    print(f'{Fore.YELLOW}[-] [{status_code}] {Fore.WHITE}{url}{Fore.YELLOW} ... not vulnerable!{Style.RESET_ALL}  ')
-        
-            if self.arguments.file_containing_urls or self.arguments.fuzz_and_scan:
-                self.progress.append(1)
-                print(f'\r{Fore.YELLOW}[*] ProgressBar: {Fore.WHITE}{len(self.progress)}/{self.total} {Fore.YELLOW}[Errors: {Fore.RED}{len(self.errors)}{Fore.YELLOW}] [Vulnerable: {Fore.GREEN}{len(self.vulnerable_urls)}{Fore.YELLOW}] ... {Style.RESET_ALL}', end="")
-        except Exception as e:
-            if self.arguments.url:
-                print(f'{Fore.RED}[!] {Fore.YELLOW}[ERROR] : {e} {Fore.YELLOW}[{Fore.GREEN}{url}{Fore.YELLOW}]{Style.RESET_ALL}')
+                        status = f"{Fore.YELLOW}Might Be Vulnerable"
+                    
+                    self.vulnerable_urls.append(url)
+                    if self.arguments.url:
+                        print(f'{Fore.GREEN}[+] [302] {Fore.WHITE}{url} {Fore.YELLOW}[Location: {Fore.GREEN}{response.headers["Location"]}{Fore.WHITE}] [Status: {status}{Fore.YELLOW}]{Style.RESET_ALL}')
             
-            elif self.arguments.file_containing_urls or self.arguments.fuzz_and_scan:
-                self.errors.append(1)
+            elif self.arguments.url:
+                print(f'{Fore.YELLOW}[-] [{response.status_code}] {Fore.WHITE}{url}{Fore.YELLOW} ... not vulnerable!{Style.RESET_ALL}')
+
+            if not self.arguments.url:
                 self.progress.append(1)
                 print(f'\r{Fore.YELLOW}[*] ProgressBar: {Fore.WHITE}{len(self.progress)}/{self.total} {Fore.YELLOW}[Errors: {Fore.RED}{len(self.errors)}{Fore.YELLOW}] [Vulnerable: {Fore.GREEN}{len(self.vulnerable_urls)}{Fore.YELLOW}] ... {Style.RESET_ALL}', end="")
+        
+        except Exception:
+            self.errors.append(1)
+            if not self.arguments.url:
+                self.progress.append(1)
 
 if __name__ == '__main__':
     test = scannerweb()
     test.start()
-        
